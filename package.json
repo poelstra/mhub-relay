@@ -1,0 +1,27 @@
+{
+  "name": "mhub-relay",
+  "version": "1.0.0",
+  "description": "Relay for MHub protocol",
+  "main": "relay.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/poelstra/mhub-relay.git"
+  },
+  "keywords": [
+    "mhub",
+    "relay"
+  ],
+  "author": "Martin Poelstra <martin@beryllium.net>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/poelstra/mhub-relay/issues"
+  },
+  "homepage": "https://github.com/poelstra/mhub-relay#readme",
+  "dependencies": {
+    "mhub": "^0.2.1",
+    "node-uuid": "^1.4.3"
+  }
+}
