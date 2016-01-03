@@ -1,69 +1,50 @@
+#!/usr/bin/env node
+
 /**
  * Relay between two or more MHub servers.
  */
 
-/// <reference path="./typings/tsd.d.ts" />
-
 "use strict";
 
 import * as uuid from "node-uuid";
-import * as fs from "fs";
 import * as path from "path";
 import { MClient, Message } from "mhub";
 
+import { MaybeArray, ensureArray } from "./util";
+import { RelayConfig, Binding, Input, NodeSpec, parseConfig } from "./config";
+
 var currentInstance = "relay-" + uuid.v1();
 
-var configFile = path.resolve(__dirname, "relay.conf.json");
-console.log("Using config file " + configFile);
-var config: RelayConfig = JSON.parse(fs.readFileSync(configFile, "utf8"));
+var config: RelayConfig;
+var connections: { [name: string]: Connection } = {};
 
-interface NodeSpec {
-	server: string;
-	node: string;
-};
-
-interface Filter {
-	from: NodeSpec; // Can be passed as "server/node" in config file
-	pattern?: string;
-}
-
-interface Binding {
-	filters: Filter[];
-	target: NodeSpec; // Can be passed as "server/node" in config file
-}
-
-interface RelayConfig {
-	/**
-	 * name -> URL, e.g. ws://localhost:13900
-	 */
-	servers: { [ name: string ]: string; };
-
-	bindings: { [name: string ]: Binding; };
-}
-
-var servers: { [name: string]: Server } = {};
-
-class Server {
+class Connection {
 	client: MClient;
 	name: string;
-	subscriptions: { [id: string]: Binding; } = Object.create(null);
+	bindings: { [id: string]: Binding; } = Object.create(null);
+
+	private _reconnectTimer: any = null;
+	private _connecting: MClient = null;
 
 	constructor(name: string) {
 		this.name = name;
+		// TODO: move this step to config parsing
 		for (var id in config.bindings) {
 			if (!config.bindings.hasOwnProperty(id)) {
 				continue;
 			}
 			var binding = config.bindings[id];
-			let filters = binding.filters.filter(
-				(f) => f.from.server === this.name
+			let input = binding.input.filter(
+				(f) => f.node.server === this.name
 			);
-			if (filters.length === 0) {
+			if (input.length === 0) {
 				continue;
 			}
-			this.subscriptions[id] = {
-				filters: filters,
-				target: binding.target
+
+			this.bindings[id] = {
+				input: input,
+				output: binding.output,
+				transform: binding.transform
 			};
 		}
 	}
@@ -74,52 +55,106 @@ class Server {
 	}
 
 	private _connect(): void {
-		var c = new MClient(config.servers[this.name]);
-		this._log("connecting to " + config.servers[this.name]);
+		if (this._connecting) {
+			return;
+		}
+		var c = new MClient(config.connections[this.name]);
+		this._connecting = c;
+		this._log("connecting to " + config.connections[this.name]);
 		c.on("open", (): void => {
 			this._log("connected");
 			this.client = c;
+			this._connecting = null; // TODO maybe wait until subscribe is done
 			this._subscribe();
 		});
 		c.on("close", (): void => {
 			this._log("closed");
-			this.client = null;
-			setTimeout((): void => {
-				this._connect();
-			}, 1000);
+			this._reconnect();
 		});
 		c.on("error", (e: Error): void => {
 			this._log("error:", e);
-			this.client = null;
-			setTimeout((): void => {
-				this._connect();
-			}, 1000);
+			this._reconnect();
 		});
 		c.on("message", (m: Message, subscription: string): void => {
 			this._handleMessage(m, subscription);
 		});
 	}
 
+	private _reconnect(): void {
+		if (this._connecting) {
+			this._connecting.close();
+			this._connecting = null;
+		}
+		if (this.client) {
+			this.client.close();
+			this.client = null;
+		}
+		if (!this._reconnectTimer) {
+			this._reconnectTimer = setTimeout((): void => {
+				this._reconnectTimer = null;
+				this._connect();
+			}, 3000);
+		}
+	}
+
 	private _handleMessage(message: Message, subscription: string): void {
+		/* TODO: think this through some more: relay can also be used to process
+		   messages that come back again on e.g. different nodes, which would
+		   not necessarily be loops.
+		   Additionally, need to actually set this header on outgoing messages.
 		if (message.headers["x-via-" + currentInstance]) {
 			return; // Skip the messages we posted ourselves
 		}
+		*/
 		if (!this.client) {
 			return;
 		}
-		let sub = this.subscriptions[subscription];
-		if (!sub) {
+		let binding = this.bindings[subscription];
+		if (!binding) {
 			return;
 		}
-		var destServer = servers[sub.target.server];
-		console.log(`#${subscription} [${this.name}] -> [${sub.target.server}/${sub.target.node}]: ${message.topic}`);
-		destServer.client.publish(sub.target.node, message);
+		console.log(`#${subscription} [${this.name}] ${message.topic}`);
+
+		if (!binding.transform) {
+			this._publish(message, binding);
+		} else {
+			Promise.resolve(message)
+				.then(binding.transform)
+				.then((transformed: void|MaybeArray<void|Message>): void => {
+					if (transformed === undefined) {
+						return;
+					}
+					ensureArray(transformed).forEach((msg: Message) => {
+						if (typeof msg !== "object") {
+							throw new Error("invalid transformed message: object or array of objects expected");
+						}
+						if (typeof msg.topic !== "string") {
+							throw new Error("invalid transformed message: topic string expected");
+						}
+						this._publish(msg, binding);
+					});
+				});
+		}
+	}
+
+	private _publish(message: Message, binding: Binding): void {
+		binding.output.forEach((out: NodeSpec) => {
+			var outConn = connections[out.server];
+			// TODO prefix every line with a unique message ID?
+			// Because transformed message may be out-of-order/delayed etc
+			console.log(` -> [${out.server}/${out.node}]: ${message.topic}`);
+			if (outConn.client) {
+				outConn.client.publish(out.node, message);
+			} else {
+				console.warn(`  -> error: ${out.server}: not connected`);
+			}
+		});
 	}
 
 	private _subscribe(): void {
-		for (var id in this.subscriptions) {
-			this.subscriptions[id].filters.forEach((f) => {
-				this.client.subscribe(f.from.node, f.pattern, id);
+		for (var id in this.bindings) {
+			this.bindings[id].input.forEach((i) => {
+				this.client.subscribe(i.node.node, i.pattern, id);
 			});
 		}
 	}
@@ -129,35 +164,16 @@ class Server {
 	}
 }
 
-function parseNodeSpec(s: string|NodeSpec): NodeSpec {
-	if (typeof s !== "string") {
-		return s;
-	}
-	let match = (<string>s).match(/([^\/]+)\/(.*)/);
-	if (!match) {
-		throw new Error(`invalid NodeSpec '${s}', expected e.g. 'server/node'`);
-	}
-	return {
-		server: match[1],
-		node: match[2]
-	};
-}
+const configFile = path.resolve(__dirname, "relay.conf.json");
+console.log("Using config file " + configFile);
+config = parseConfig(configFile);
 
-for (let id in config.bindings) {
-	if (!config.bindings.hasOwnProperty(id)) {
-		continue;
-	}
-	let binding = config.bindings[id];
-	binding.target = parseNodeSpec(binding.target);
-	binding.filters.forEach((f: Filter): void => {
-		f.from = parseNodeSpec(f.from);
-	});
-}
-
-Object.keys(config.servers).forEach((name: string): void => {
-	servers[name] = new Server(name);
+// Create connection objects (also validates config semantically)
+Object.keys(config.connections).forEach((name: string): void => {
+	connections[name] = new Connection(name);
 });
 
-Object.keys(servers).forEach((name: string): void => {
-	servers[name].start();
+// Start the connections
+Object.keys(connections).forEach((name: string): void => {
+	connections[name].start();
 });
