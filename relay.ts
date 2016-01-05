@@ -128,6 +128,8 @@ export class Connection {
 						}
 						this._publish(msg, binding);
 					});
+				}).catch((e: any) => {
+					setImmediate(() => { throw new Error("message transform failed: " + String(e)); });
 				});
 		}
 	}
