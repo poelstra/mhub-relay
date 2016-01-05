@@ -135,7 +135,10 @@ export function parseConfig(config: ConfigRoot): RelayConfig {
 		let transform: Transform;
 		if (bindConf.transform) {
 			try {
-				let t = require(<any>(bindConf.transform));
+				let t: any = bindConf.transform;
+				if (typeof t === "string") {
+					t = require(<any>(bindConf.transform));
+				}
 				if (typeof t === "object" && t.default) {
 					t = t.default;
 				}
