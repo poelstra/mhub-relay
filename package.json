@@ -1,7 +1,7 @@
 {
   "name": "mhub-relay",
   "version": "1.0.0",
-  "description": "Relay for MHub protocol",
+  "description": "Message router for MHub protocol",
   "main": "relay.js",
   "bin": {
     "mhub-relay": "./bin/mhub-relay"
@@ -18,7 +18,9 @@
   },
   "keywords": [
     "mhub",
-    "relay"
+    "relay",
+    "message",
+    "router"
   ],
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
@@ -30,6 +32,7 @@
     "mhub": "^0.3.0",
     "yargs": "^3.31.0"
   },
+  "typings": "./relay.d.ts",
   "devDependencies": {
     "typescript": "~1.7.5"
   }
