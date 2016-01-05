@@ -1,0 +1,8 @@
+/typings
+/tsd.json
+/tslint.json
+/.editorconfig
+/.gitattributes
+/.gitignore
+/.npmignore
+/.travis.yml

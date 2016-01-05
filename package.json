@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./relay",
-    "build": "tsc"
+    "build": "tsc",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -24,5 +25,8 @@
   "homepage": "https://github.com/poelstra/mhub-relay#readme",
   "dependencies": {
     "mhub": "^0.3.0"
+  },
+  "devDependencies": {
+    "typescript": "~1.7.5"
   }
 }
