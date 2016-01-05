@@ -1,6 +1,5 @@
 "use strict";
 
-import * as fs from "fs";
 import { Message } from "mhub";
 
 import { MaybeArray, ensureArray } from "./util";
@@ -8,7 +7,7 @@ import { MaybeArray, ensureArray } from "./util";
 /**
  * Structure of a relay.conf.json file.
  */
-interface ConfigRoot {
+export interface ConfigRoot {
 	/**
 	 * Map of identifier => URL, e.g. { "myserver": "ws://localhost:13900" }
 	 */
@@ -25,7 +24,7 @@ interface ConfigRoot {
  * Binding between input and output node(s), optionally with a transform
  * function.
  */
-interface BindingConfig {
+export interface BindingConfig {
 	input: MaybeArray<string|InputConfig>;
 	output: string|string[];
 	transform?: string;
@@ -35,7 +34,7 @@ interface BindingConfig {
  * Input specification for a binding, i.e. which node(s) to subscribe to, using
  * which pattern(s).
  */
-interface InputConfig {
+export interface InputConfig {
 	node: string;
 	pattern?: string;
 }
@@ -100,9 +99,7 @@ function parseNodeSpec(s: string|NodeSpec): NodeSpec {
 }
 
 // Read and parse config file
-export function parseConfig(filename: string): RelayConfig {
-	let config: ConfigRoot = JSON.parse(fs.readFileSync(filename, "utf8"));
-
+export function parseConfig(config: ConfigRoot): RelayConfig {
 	// Parse connection settings
 	if (typeof config.connections !== "object") {
 		throw new Error("invalid configuration: missing 'connections' object");

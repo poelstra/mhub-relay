@@ -1,21 +1,16 @@
-#!/usr/bin/env node
-
 /**
  * Relay between two or more MHub servers.
  */
 
 "use strict";
 
-import * as path from "path";
 import { MClient, Message } from "mhub";
 
 import { MaybeArray, ensureArray } from "./util";
-import { RelayConfig, Binding, Input, NodeSpec, parseConfig } from "./config";
+import { ConfigRoot, RelayConfig, Binding, Input, NodeSpec, parseConfig } from "./config";
 
-var config: RelayConfig;
-var connections: { [name: string]: Connection } = {};
-
-class Connection {
+export class Connection {
+	relay: Relay;
 	client: MClient;
 	name: string;
 	bindings: { [id: string]: Binding; } = Object.create(null);
@@ -23,9 +18,11 @@ class Connection {
 	private _reconnectTimer: any = null;
 	private _connecting: MClient = null;
 
-	constructor(name: string) {
+	constructor(relay: Relay, name: string) {
+		this.relay = relay;
 		this.name = name;
 		// TODO: move this step to config parsing
+		const config = relay.config;
 		for (var id in config.bindings) {
 			if (!config.bindings.hasOwnProperty(id)) {
 				continue;
@@ -55,6 +52,7 @@ class Connection {
 		if (this._connecting) {
 			return;
 		}
+		const config = this.relay.config;
 		var c = new MClient(config.connections[this.name]);
 		this._connecting = c;
 		this._log("connecting to " + config.connections[this.name]);
@@ -136,7 +134,7 @@ class Connection {
 
 	private _publish(message: Message, binding: Binding): void {
 		binding.output.forEach((out: NodeSpec) => {
-			var outConn = connections[out.server];
+			var outConn = this.relay.connections[out.server];
 			// TODO prefix every line with a unique message ID?
 			// Because transformed message may be out-of-order/delayed etc
 			console.log(` -> [${out.server}/${out.node}]: ${message.topic}`);
@@ -161,16 +159,25 @@ class Connection {
 	}
 }
 
-const configFile = path.resolve(__dirname, "relay.conf.json");
-console.log("Using config file " + configFile);
-config = parseConfig(configFile);
+export class Relay {
+	public config: RelayConfig;
+	public connections: { [name: string]: Connection } = {};
 
-// Create connection objects (also validates config semantically)
-Object.keys(config.connections).forEach((name: string): void => {
-	connections[name] = new Connection(name);
-});
+	constructor(configJson: ConfigRoot) {
+		this.config = parseConfig(configJson);
 
-// Start the connections
-Object.keys(connections).forEach((name: string): void => {
-	connections[name].start();
-});
+		// Create connection objects (also validates config semantically)
+		Object.keys(this.config.connections).forEach((name: string): void => {
+			this.connections[name] = new Connection(this, name);
+		});
+	}
+
+	start(): void {
+		// Start the connections
+		Object.keys(this.connections).forEach((name: string): void => {
+			this.connections[name].start();
+		});
+	}
+}
+
+export default Relay;
