@@ -23,7 +23,6 @@
   },
   "homepage": "https://github.com/poelstra/mhub-relay#readme",
   "dependencies": {
-    "mhub": "^0.3.0",
-    "node-uuid": "^1.4.3"
+    "mhub": "^0.3.0"
   }
 }

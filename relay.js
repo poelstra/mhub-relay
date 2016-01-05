@@ -1,10 +1,8 @@
 #!/usr/bin/env node"use strict";
-var uuid = require("node-uuid");
 var path = require("path");
 var mhub_1 = require("mhub");
 var util_1 = require("./util");
 var config_1 = require("./config");
-var currentInstance = "relay-" + uuid.v1();
 var config;
 var connections = {};
 var Connection = (function () {

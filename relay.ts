@@ -6,14 +6,11 @@
 
 "use strict";
 
-import * as uuid from "node-uuid";
 import * as path from "path";
 import { MClient, Message } from "mhub";
 
 import { MaybeArray, ensureArray } from "./util";
 import { RelayConfig, Binding, Input, NodeSpec, parseConfig } from "./config";
-
-var currentInstance = "relay-" + uuid.v1();
 
 var config: RelayConfig;
 var connections: { [name: string]: Connection } = {};
