@@ -6,6 +6,29 @@
 MHub destination nodes, optionally transforming/filtering them.
 Source and destination nodes can be on the same, or different MHub servers.
 
+## What does it do?
+
+It:
+* connects to all given MHub servers (specified in `connections` in the config file)
+* subscribes to topics on specific nodes on these MHub servers (given as one or more `input`(s) in the `bindings` property of your config)
+* optionally transforms messages by passing them through a JS function (specified in `transform` in each binding)
+* passes any messages that match these patterns to one or more output nodes (`output` in each binding)
+
+It will also automatically reconnect to a server in case a connection fails.
+
+This functionality can be used for many things, e.g.:
+* separation of concerns: by providing application-specific nodes on the MHub
+  server, these applications don't have to know about other applications. You
+  specify these inter-app relations through bindings in a relay.
+* data transformation: automatically convert messages from one application into
+  a different message for another application. This can be a simple
+  transformation like filtering certain messages or e.g. re-arranging some
+  properties, but can even be fetching an updated scores list from a REST API
+  whenever a 'new scores' messages arrives, and sending a ranking along to other
+  apps.
+* relaying 'public' messages from a local MHub network to an MHub server on an
+  external network.
+
 ## Basic installation and usage
 
 ```sh
