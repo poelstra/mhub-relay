@@ -12,7 +12,7 @@
 			"input": [
 				{ "node": "local/default", "pattern": "*" }
 			],
-			"transform": "./exampleTransform.js",
+			"transform": "exampleTransform.js",
 			"output": [
 				"local/test"
 			]

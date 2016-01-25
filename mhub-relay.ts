@@ -34,5 +34,5 @@ console.log("Using config file " + configFilename);
 
 const configJson = JSON.parse(fs.readFileSync(configFilename, "utf8"));
 
-const relay = new Relay(configJson);
+const relay = new Relay(configJson, path.dirname(configFilename));
 relay.start();

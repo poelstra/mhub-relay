@@ -75,6 +75,9 @@ Create a copy of that file, edit it to your needs, then start the relay as:
 mhub-relay -c <your_config.json>
 ```
 
+Note: any relative filename for a transform is resolved relative to the location
+of your config file.
+
 ## Using as a library
 
 It is also possible to include the relay in your own program, for example:

@@ -1,6 +1,7 @@
 "use strict";
 
 import { Message } from "mhub";
+import * as path from "path";
 
 import { MaybeArray, ensureArray } from "./util";
 
@@ -98,8 +99,19 @@ function parseNodeSpec(s: string|NodeSpec): NodeSpec {
 	};
 }
 
-// Read and parse config file
-export function parseConfig(config: ConfigRoot): RelayConfig {
+/**
+ * Parse and validate 'raw' configuration object.
+ *
+ * @param  {ConfigRoot}  config  Raw configuration object (as given in e.g. config file)
+ * @param  {string}      rootDir Optional base path for resolving relative filenames (e.g. for transforms)
+ * @return {RelayConfig}         Parsed configuration
+ */
+export function parseConfig(config: ConfigRoot, rootDir?: string): RelayConfig {
+	if (!rootDir) {
+		// Use working dir as root dir if it wasn't explicitly given
+		rootDir = "";
+	}
+
 	// Parse connection settings
 	if (typeof config.connections !== "object") {
 		throw new Error("invalid configuration: missing 'connections' object");
@@ -137,7 +149,10 @@ export function parseConfig(config: ConfigRoot): RelayConfig {
 			try {
 				let t: any = bindConf.transform;
 				if (typeof t === "string") {
-					t = require(<any>(bindConf.transform));
+					// Resolve any filename relative to the rootDir (unless it's
+					// already given as absolute name)
+					const filename: string = bindConf.transform;
+					t = require(path.resolve(rootDir, filename));
 				}
 				if (typeof t === "object" && t.default) {
 					t = t.default;

@@ -165,8 +165,16 @@ export class Relay {
 	public config: RelayConfig;
 	public connections: { [name: string]: Connection } = {};
 
-	constructor(configJson: ConfigRoot) {
-		this.config = parseConfig(configJson);
+	/**
+	 * Instantiate new MHub Relay object
+	 *
+	 * @param  {ConfigRoot} configJson Relay configuration object
+	 * @param  {string}     rootDir    Root directory to resolve relative (transform-)filenames.
+	 *                                 Uses working dir if left empty.
+	 *                                 Tip: use `__dirname` from your own scripts.
+	 */
+	constructor(configJson: ConfigRoot, rootDir?: string) {
+		this.config = parseConfig(configJson, rootDir);
 
 		// Create connection objects (also validates config semantically)
 		Object.keys(this.config.connections).forEach((name: string): void => {
