@@ -1,6 +1,6 @@
 {
   "name": "mhub-relay",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Message router for MHub protocol",
   "main": "relay.js",
   "bin": {
