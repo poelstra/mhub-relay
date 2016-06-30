@@ -43,22 +43,22 @@ You'll also need one or more [MHub server(s)](https://github.com/poelstra/mhub).
 First, `npm install -g mhub mhub-relay`.
 
 To make the test more interesting, run two MHub servers:
-* one on localhost, port 13900 (the default, just start `mserver`)
-* run another one on localhost, port 13901 (copy MHub's `server.conf.json`, change port number, `mserver -c <your_copy.json>`).
+* one on localhost, port 13900 (the default, just start `mhub-server`)
+* run another one on localhost, port 13901 (copy MHub's `server.conf.json`, change port number, `mhub-server -c <your_copy.json>`).
 
 Now, start MHub relay with the example configuration:
 ```sh
 mhub-relay
 ```
 
-Then, start an `mclient` to listen for transformed messages (on node 'test'):
+Then, start an `mhub-client` to listen for transformed messages (on node 'test'):
 ```sh
-mclient -l -n test
+mhub-client -l -n test
 ```
 
 And start another one to listen for 'remotely' copied messages:
 ```sh
-mclient -l -h localhost:13901
+mhub-client -l -h localhost:13901
 ```
 
 The first client shows the transformed messages (i.e. those matching the
@@ -69,19 +69,19 @@ from the default node on port 13900 are 'copied' to the default node on port
 In another terminal, send some messages that will be transformed, as specified
 by the default example configuration:
 ```
-mclient -t duplicate
-mclient -t delay
-mclient -t foobar
+mhub-client -t duplicate
+mhub-client -t delay
+mhub-client -t foobar
 ```
 
-You'll see it on the first listening `mclient` as:
+You'll see it on the first listening `mhub-client` as:
 ```
 { topic: 'duplicate', data: undefined, headers: {} }
 { topic: 'duplicate', data: undefined, headers: {} }
 { topic: 'delay', data: undefined, headers: {} }
 ```
 
-And on the second listening `mclient` as:
+And on the second listening `mhub-client` as:
 ```
 { topic: 'duplicate', data: undefined, headers: {} }
 { topic: 'delay', data: undefined, headers: {} }
